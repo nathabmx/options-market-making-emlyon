@@ -8,7 +8,7 @@ logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__)
 
-# URL de votre micro-service pricer en ligne (à configurer via variable d'env)
+# URL de votre micro-service pricer en ligne (via variable d'environnement)
 PRICER_PRICE_URL = os.environ.get("PRICER_PRICE_URL")
 
 # Validation des modèles et produits
@@ -33,13 +33,14 @@ def parameter():
     data = request.get_json() or {}
     app.logger.info(f"🔥 Payload reçu sur /parameter : {data}")
 
-    # Vérification configuration pricer
+    # Vérification configuration du pricer
     if not PRICER_PRICE_URL:
         return jsonify({"error": "Service pricer non configuré."}), 503
 
-    model    = data.get("model")
-    product  = data.get("product")
-    strike   = data.get("strike")
+    # Extraction des champs
+    model = data.get("model")
+    product = data.get("product")
+    strike = data.get("strike")
     maturity = data.get("maturity")
 
     # 1) Validation des champs obligatoires
@@ -54,9 +55,9 @@ def parameter():
 
     # 3) Construction du payload et appel au pricer
     payload = {
-        "model":    model,
-        "product":  product,
-        "strike":   strike,
+        "model": model,
+        "product": product,
+        "strike": strike,
         "maturity": maturity
     }
     try:
@@ -75,7 +76,7 @@ def parameter():
     return jsonify({"price": price}), 200
 
 if __name__ == '__main__':
-    # Render fournit $PORT ; sinon fallback sur 5001
+    # Render fournira $PORT ; sinon fallback sur 5001
     port = int(os.environ.get('PORT', '5001'))
     app.run(host='0.0.0.0', port=port)
 
