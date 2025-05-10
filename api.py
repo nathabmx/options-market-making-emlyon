@@ -1,14 +1,15 @@
 import logging
+import os
 from flask import Flask, request, jsonify
 import requests
 
-# --- Logging pour debug payload ---
+# === Logging pour debug payload ===
 logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__)
 
-# URL de votre micro-service pricer en ligne
-PRICER_PRICE_URL = "https://votre-pricer-en-ligne.onrender.com/price"
+# URL de votre micro-service pricer en ligne (à configurer via variable d'env)
+PRICER_PRICE_URL = os.environ.get("PRICER_PRICE_URL")
 
 # Validation des modèles et produits
 VALID_MODELS = {"Heston", "Bates", "Double Heston"}
@@ -32,10 +33,14 @@ def parameter():
     data = request.get_json() or {}
     app.logger.info(f"🔥 Payload reçu sur /parameter : {data}")
 
-    model   = data.get("model")
-    product = data.get("product")
-    strike  = data.get("strike")
-    maturity= data.get("maturity")
+    # Vérification configuration pricer
+    if not PRICER_PRICE_URL:
+        return jsonify({"error": "Service pricer non configuré."}), 503
+
+    model    = data.get("model")
+    product  = data.get("product")
+    strike   = data.get("strike")
+    maturity = data.get("maturity")
 
     # 1) Validation des champs obligatoires
     if not model or not product or strike is None or maturity is None:
@@ -70,8 +75,9 @@ def parameter():
     return jsonify({"price": price}), 200
 
 if __name__ == '__main__':
-    # Render fournira automatiquement $PORT ; sinon 5001 en local
-    app.run(host='0.0.0.0', port=int(__import__('os').environ.get('PORT', '5001')))
+    # Render fournit $PORT ; sinon fallback sur 5001
+    port = int(os.environ.get('PORT', '5001'))
+    app.run(host='0.0.0.0', port=port)
 
 
 
