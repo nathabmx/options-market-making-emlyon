@@ -1,9 +1,13 @@
+import logging
 from flask import Flask, request, jsonify
 import requests
 
+# --- Logging pour debug payload ---
+logging.basicConfig(level=logging.INFO)
+
 app = Flask(__name__)
 
-# URL de votre micro-service pricer en ligne pour le calcul de prix
+# URL de votre micro-service pricer en ligne
 PRICER_PRICE_URL = "https://votre-pricer-en-ligne.onrender.com/price"
 
 # Validation des modèles et produits
@@ -26,5 +30,49 @@ VALID_PRODUCTS = {
 @app.route('/parameter', methods=['POST'])
 def parameter():
     data = request.get_json() or {}
-    model = data.get("model")
-    prod
+    app.logger.info(f"🔥 Payload reçu sur /parameter : {data}")
+
+    model   = data.get("model")
+    product = data.get("product")
+    strike  = data.get("strike")
+    maturity= data.get("maturity")
+
+    # 1) Validation des champs obligatoires
+    if not model or not product or strike is None or maturity is None:
+        return jsonify({"error": "Champs manquants : model, product, strike, maturity sont requis."}), 400
+
+    # 2) Validation du modèle et du produit
+    if model not in VALID_MODELS:
+        return jsonify({"error": f"Modèle '{model}' non supporté."}), 400
+    if product not in VALID_PRODUCTS:
+        return jsonify({"error": f"Produit '{product}' non supporté."}), 400
+
+    # 3) Construction du payload et appel au pricer
+    payload = {
+        "model":    model,
+        "product":  product,
+        "strike":   strike,
+        "maturity": maturity
+    }
+    try:
+        resp = requests.post(PRICER_PRICE_URL, json=payload, timeout=10)
+        resp.raise_for_status()
+        result = resp.json()
+    except requests.RequestException:
+        return jsonify({"error": "Service pricer indisponible."}), 502
+    except ValueError:
+        return jsonify({"error": "Réponse du pricer invalide (JSON attendu)."}), 502
+
+    # 4) Extraction et renvoi du prix
+    price = result.get("price")
+    if price is None:
+        return jsonify({"error": "Clé 'price' absente de la réponse du pricer."}), 502
+    return jsonify({"price": price}), 200
+
+if __name__ == '__main__':
+    # Render fournira automatiquement $PORT ; sinon 5001 en local
+    app.run(host='0.0.0.0', port=int(__import__('os').environ.get('PORT', '5001')))
+
+
+
+
