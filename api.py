@@ -45,7 +45,7 @@ def parameter():
 
     # 1) Validation des champs obligatoires
     if not model or not product or strike is None or maturity is None:
-        return jsonify({"error": "Champs manquants : model, product, strike, maturity sont requis."}), 400
+        return jsonify({"error": "Champs manquants : model, product, strike, maturity sont requis."}), 400
 
     # 2) Validation du modèle et du produit
     if model not in VALID_MODELS:
@@ -76,9 +76,10 @@ def parameter():
     return jsonify({"price": price}), 200
 
 if __name__ == '__main__':
-    # Render fournira $PORT ; sinon fallback sur 5001
+    # Récupération du port depuis l'environnement ou use 5001
     port = int(os.environ.get('PORT', '5001'))
     app.run(host='0.0.0.0', port=port)
+
 
 
 
